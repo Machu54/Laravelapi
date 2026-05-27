@@ -4,7 +4,11 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
+<<<<<<< HEAD
     "content-hash": "fdcd0968e455f4dbe61e761257901c4b",
+=======
+    "content-hash": "53b5d56b3b7e3cbac1713e68c8850f6c",
+>>>>>>> 41ad3c20eba36e2c4aa1c7f471e6ec9176c26b52
     "packages": [
         {
             "name": "brick/math",
@@ -136,6 +140,7 @@
             "time": "2024-02-09T16:56:22+00:00"
         },
         {
+<<<<<<< HEAD
             "name": "clue/redis-protocol",
             "version": "v0.3.2",
             "source": {
@@ -266,6 +271,8 @@
             "time": "2025-01-03T16:18:33+00:00"
         },
         {
+=======
+>>>>>>> 41ad3c20eba36e2c4aa1c7f471e6ec9176c26b52
             "name": "dflydev/dot-access-data",
             "version": "v3.0.3",
             "source": {
@@ -639,6 +646,7 @@
             "time": "2025-03-06T22:45:56+00:00"
         },
         {
+<<<<<<< HEAD
             "name": "evenement/evenement",
             "version": "v3.0.2",
             "source": {
@@ -686,6 +694,8 @@
             "time": "2023-08-08T05:53:35+00:00"
         },
         {
+=======
+>>>>>>> 41ad3c20eba36e2c4aa1c7f471e6ec9176c26b52
             "name": "fruitcake/php-cors",
             "version": "v1.4.0",
             "source": {
@@ -1512,6 +1522,7 @@
             "time": "2026-04-20T16:07:33+00:00"
         },
         {
+<<<<<<< HEAD
             "name": "laravel/reverb",
             "version": "v1.10.2",
             "source": {
@@ -1591,6 +1602,8 @@
             "time": "2026-05-10T15:47:52+00:00"
         },
         {
+=======
+>>>>>>> 41ad3c20eba36e2c4aa1c7f471e6ec9176c26b52
             "name": "laravel/serializable-closure",
             "version": "v2.0.13",
             "source": {
@@ -3354,6 +3367,7 @@
             "time": "2026-03-22T23:03:24+00:00"
         },
         {
+<<<<<<< HEAD
             "name": "pusher/pusher-php-server",
             "version": "7.2.8",
             "source": {
@@ -3414,6 +3428,8 @@
             "time": "2026-05-18T13:11:36+00:00"
         },
         {
+=======
+>>>>>>> 41ad3c20eba36e2c4aa1c7f471e6ec9176c26b52
             "name": "ralouphie/getallheaders",
             "version": "3.0.3",
             "source": {
@@ -3612,6 +3628,7 @@
             "time": "2025-12-14T04:43:48+00:00"
         },
         {
+<<<<<<< HEAD
             "name": "ratchet/rfc6455",
             "version": "v0.4.0",
             "source": {
@@ -4201,6 +4218,8 @@
             "time": "2024-06-11T12:45:25+00:00"
         },
         {
+=======
+>>>>>>> 41ad3c20eba36e2c4aa1c7f471e6ec9176c26b52
             "name": "symfony/clock",
             "version": "v7.4.8",
             "source": {
