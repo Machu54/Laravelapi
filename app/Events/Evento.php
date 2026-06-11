@@ -11,22 +11,26 @@ class Evento implements ShouldBroadcastNow
 {
     use Dispatchable, SerializesModels;
 
-    public $data;
+    public array $data;
 
-    public function __construct($data)
+    public string $canal;
+
+    public function __construct(array $data, string $canal)
     {
         $this->data = $data;
-    }
 
-    public function broadcastAs(): string
-    {
-        return 'Mensaje';
+        $this->canal = $canal;
     }
 
     public function broadcastOn(): array
     {
         return [
-            new Channel('chat'),
+            new Channel($this->canal)
         ];
+    }
+
+    public function broadcastAs(): string
+    {
+        return 'Mensaje';
     }
 }

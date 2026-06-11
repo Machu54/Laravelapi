@@ -1,9 +1,11 @@
 <?php
-
+use App\Models\Usuario;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\Correos;
 
 use App\Events\Evento;
 
@@ -27,29 +29,187 @@ Route::get('/prueba', function () {
 /* =========================================
    USUARIOS
 ========================================= */
-
 Route::post('/usuarios', function (Request $request) {
 
-    $id = DB::table('usuarios')->insertGetId([
+    DB::beginTransaction();
 
-        'id_persona' => $request->id_persona,
+    try {
+
+        $codigo = rand(100000,999999);
+
+        $idPersona = DB::table('personas')->insertGetId([
+
+            'nombre' => $request->nombre,
+
+            'apellido_p' => $request->apellido_p,
+
+            'apellido_m' => $request->apellido_m,
+
+            'celular' => $request->celular,
+
+            'activo' => true,
+
+            'created_at' => now(),
+
+            'updated_at' => now()
+        ]);
+
+        $idUsuario = DB::table('usuarios')->insertGetId([
+
+            'id_persona' => $idPersona,
+
+            'correo' => strtolower($request->correo),
+
+            'pass' => Hash::make($request->pass),
+
+            'admin' => $request->admin ?? false,
+
+            'correo_verificado' => false,
+
+            'codigo_verificacion' => $codigo,
+
+            'created_at' => now(),
+
+            'updated_at' => now()
+        ]);
+
+        Mail::to($request->correo)
+            ->send(new Correos($codigo));
+
+        DB::commit();
+
+        return response()->json([
+
+            'ok' => true,
+
+            'mensaje' => 'Usuario creado correctamente. Revisa tu correo.',
+
+            'id' => $idUsuario
+        ]);
+
+    } catch (\Exception $e) {
+
+        DB::rollBack();
+
+        return response()->json([
+
+            'ok' => false,
+
+            'mensaje' => $e->getMessage()
+        ], 500);
+    }
+});
+
+Route::get('/usuarios', function () {
+
+    return DB::table('usuarios')
+    ->join(
+        'personas',
+        'usuarios.id_persona',
+        '=',
+        'personas.id'
+    )
+    ->select(
+        'usuarios.*',
+        'personas.nombre',
+        'personas.apellido_p',
+        'personas.apellido_m',
+        'personas.celular'
+    )
+    ->orderBy('usuarios.id', 'desc')
+    ->get();
+
+});
+Route::put('/usuarios/{id}', function (
+    Request $request,
+    $id
+) {
+
+    $usuario = DB::table('usuarios')
+    ->where('id', $id)
+    ->first();
+
+    if(!$usuario){
+
+        return response()->json([
+            'ok' => false,
+            'mensaje' => 'Usuario no encontrado'
+        ],404);
+    }
+
+    DB::table('personas')
+    ->where('id', $usuario->id_persona)
+    ->update([
+
+        'nombre' => $request->nombre,
+
+        'apellido_p' => $request->apellido_p,
+
+        'apellido_m' => $request->apellido_m,
+
+        'celular' => $request->celular,
+
+        'updated_at' => now()
+    ]);
+
+    $datosUsuario = [
 
         'correo' => $request->correo,
 
-        'pass' => Hash::make($request->pass),
+        'admin' => $request->admin,
 
-        'admin' => $request->admin ?? false
-    ]);
+        'updated_at' => now()
+    ];
+
+    if(!empty($request->pass)){
+
+        $datosUsuario['pass'] =
+        Hash::make($request->pass);
+    }
+
+    DB::table('usuarios')
+    ->where('id', $id)
+    ->update($datosUsuario);
 
     return response()->json([
 
         'ok' => true,
 
-        'mensaje' => 'Usuario agregado correctamente',
-
-        'id' => $id
+        'mensaje' => 'Usuario actualizado'
     ]);
+
 });
+Route::delete('/usuarios/{id}', function ($id) {
+
+    $usuario = DB::table('usuarios')
+    ->where('id', $id)
+    ->first();
+
+    if(!$usuario){
+
+        return response()->json([
+            'ok' => false,
+            'mensaje' => 'Usuario no encontrado'
+        ],404);
+    }
+
+    DB::table('usuarios')
+    ->where('id', $id)
+    ->delete();
+
+    DB::table('personas')
+    ->where('id', $usuario->id_persona)
+    ->delete();
+
+    return response()->json([
+
+        'ok' => true,
+
+        'mensaje' => 'Usuario eliminado'
+    ]);
+
+});
+
 
 /* =========================================
    LOGIN
@@ -57,9 +217,10 @@ Route::post('/usuarios', function (Request $request) {
 
 Route::post('/login', function (Request $request) {
 
-    $usuario = DB::table('usuarios')
-        ->where('correo', $request->correo)
-        ->first();
+    $usuario = Usuario::where(
+        'correo',
+        strtolower($request->correo)
+    )->first();
 
     if (!$usuario) {
 
@@ -71,7 +232,10 @@ Route::post('/login', function (Request $request) {
         ], 401);
     }
 
-    if (!Hash::check($request->pass, $usuario->pass)) {
+    if (!Hash::check(
+        $request->pass,
+        $usuario->pass
+    )) {
 
         return response()->json([
 
@@ -81,13 +245,43 @@ Route::post('/login', function (Request $request) {
         ], 401);
     }
 
+    if (!$usuario->correo_verificado) {
+
+        return response()->json([
+
+            'ok' => false,
+
+            'mensaje' => 'Debes verificar tu correo antes de iniciar sesión'
+        ], 403);
+    }
+
+    $token = $usuario
+        ->createToken('token-api')
+        ->plainTextToken;
+
     return response()->json([
 
         'ok' => true,
 
+        'token' => $token,
+
         'usuario' => $usuario
     ]);
 });
+
+/* =========================================
+   PERFIL
+========================================= */
+
+Route::middleware('auth:sanctum')
+->get('/perfil', function (Request $request) {
+
+    return response()->json([
+
+        'usuario' => $request->user()
+    ]);
+});
+
 
 /* =========================================
    PERSONAS
@@ -265,5 +459,81 @@ Route::delete('/multas/{id}', function ($id) {
         'ok' => true,
 
         'mensaje' => 'Multa eliminada'
+    ]);
+});
+
+
+
+
+
+Route::get('/correo-prueba', function () {
+
+    $codigo = rand(100000,999999);
+
+    Mail::to(
+        'machucac394@gmail.com'
+    )->send(
+        new Correos($codigo)
+    );
+
+    return response()->json([
+
+        'ok' => true,
+
+        'mensaje' => 'Correo enviado'
+    ]);
+});
+
+
+
+
+Route::post('/verificar-correo', function (Request $request) {
+
+    $usuario = DB::table('usuarios')
+        ->where(
+            'correo',
+            strtolower($request->correo)
+        )
+        ->first();
+
+    if (!$usuario) {
+
+        return response()->json([
+
+            'ok' => false,
+
+            'mensaje' => 'Usuario no encontrado'
+        ], 404);
+    }
+
+    if (
+        $usuario->codigo_verificacion !=
+        $request->codigo
+    ) {
+
+        return response()->json([
+
+            'ok' => false,
+
+            'mensaje' => 'Código incorrecto'
+        ], 400);
+    }
+
+    DB::table('usuarios')
+        ->where('id', $usuario->id)
+        ->update([
+
+            'correo_verificado' => true,
+
+            'codigo_verificacion' => null,
+
+            'updated_at' => now()
+        ]);
+
+    return response()->json([
+
+        'ok' => true,
+
+        'mensaje' => 'Correo verificado correctamente'
     ]);
 });
