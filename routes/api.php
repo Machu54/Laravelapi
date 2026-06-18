@@ -29,7 +29,8 @@ Route::get('/prueba', function () {
 /* =========================================
    USUARIOS
 ========================================= */
-Route::post('/usuarios', function (Request $request) {
+Route::middleware('auth:sanctum')
+->post('/usuarios', function (Request $request) {
 
     DB::beginTransaction();
 
@@ -100,7 +101,8 @@ Route::post('/usuarios', function (Request $request) {
     }
 });
 
-Route::get('/usuarios', function () {
+Route::middleware('auth:sanctum')
+->get('/usuarios', function () {
 
     return DB::table('usuarios')
     ->join(
@@ -120,66 +122,106 @@ Route::get('/usuarios', function () {
     ->get();
 
 });
-Route::put('/usuarios/{id}', function (
+
+
+Route::middleware('auth:sanctum')
+->put('/usuariosput/{id}', function (
     Request $request,
     $id
 ) {
 
-    $usuario = DB::table('usuarios')
-    ->where('id', $id)
-    ->first();
+    try {
 
-    if(!$usuario){
+        $usuario = DB::table('usuarios')
+        ->where('id', $id)
+        ->first();
+
+        if(!$usuario){
+
+            return response()->json([
+                'ok' => false,
+                'mensaje' => 'Usuario no encontrado'
+            ],404);
+        }
+
+        DB::table('personas')
+        ->where('id', $usuario->id_persona)
+        ->update([
+
+            'nombre' => $request->nombre,
+
+            'apellido_p' => $request->apellido_p,
+
+            'apellido_m' => $request->apellido_m,
+
+            'celular' => $request->celular,
+
+            'updated_at' => now()
+        ]);
+
+        $datosUsuario = [
+
+            'correo' => $request->correo,
+
+            'admin' => $request->admin,
+
+            'updated_at' => now()
+
+        ];
+
+        if(!empty($request->pass)){
+
+    $datosUsuario['pass'] =
+    Hash::make($request->pass);
+
+    DB::table('personal_access_tokens')
+        ->where('tokenable_id', $id)
+        ->delete();
+
+    event(new Evento(
+
+        [
+            'tipo' => 'logout'
+        ],
+
+        'logout.' . $id
+
+    ));
+\Illuminate\Support\Facades\Log::info(
+    'Evento logout enviado para usuario ' . $id
+);
+}
+
+        DB::table('usuarios')
+        ->where('id', $id)
+        ->update($datosUsuario);
 
         return response()->json([
+
+            'ok' => true,
+
+            'mensaje' => 'Usuario actualizado'
+        ]);
+
+    } catch (\Exception $e) {
+
+        return response()->json([
+
             'ok' => false,
-            'mensaje' => 'Usuario no encontrado'
-        ],404);
+
+            'error' => $e->getMessage(),
+
+            'linea' => $e->getLine(),
+
+            'archivo' => $e->getFile()
+
+        ], 500);
     }
-
-    DB::table('personas')
-    ->where('id', $usuario->id_persona)
-    ->update([
-
-        'nombre' => $request->nombre,
-
-        'apellido_p' => $request->apellido_p,
-
-        'apellido_m' => $request->apellido_m,
-
-        'celular' => $request->celular,
-
-        'updated_at' => now()
-    ]);
-
-    $datosUsuario = [
-
-        'correo' => $request->correo,
-
-        'admin' => $request->admin,
-
-        'updated_at' => now()
-    ];
-
-    if(!empty($request->pass)){
-
-        $datosUsuario['pass'] =
-        Hash::make($request->pass);
-    }
-
-    DB::table('usuarios')
-    ->where('id', $id)
-    ->update($datosUsuario);
-
-    return response()->json([
-
-        'ok' => true,
-
-        'mensaje' => 'Usuario actualizado'
-    ]);
-
 });
-Route::delete('/usuarios/{id}', function ($id) {
+
+
+Route::middleware('auth:sanctum')
+->delete('/usuarios/{id}', function ($id) {
 
     $usuario = DB::table('usuarios')
     ->where('id', $id)
@@ -256,8 +298,10 @@ Route::post('/login', function (Request $request) {
     }
 
     $token = $usuario
-        ->createToken('token-api')
-        ->plainTextToken;
+    ->createToken(
+        $request->dispositivo ?? 'web'
+    )
+    ->plainTextToken;
 
     return response()->json([
 
@@ -535,5 +579,112 @@ Route::post('/verificar-correo', function (Request $request) {
         'ok' => true,
 
         'mensaje' => 'Correo verificado correctamente'
+    ]);
+});
+
+
+
+
+
+Route::middleware('auth:sanctum')
+->put('/perfil', function (Request $request) {
+
+    $usuario = $request->user();
+
+    DB::table('personas')
+    ->where('id', $usuario->id_persona)
+    ->update([
+
+        'nombre' => $request->nombre,
+
+        'apellido_p' => $request->apellido_p,
+
+        'apellido_m' => $request->apellido_m,
+
+        'celular' => $request->celular,
+
+        'updated_at' => now()
+    ]);
+
+    $datosUsuario = [
+
+        'correo' => strtolower($request->correo),
+
+        'updated_at' => now()
+    ];
+
+    $cambioPassword = false;
+
+    if(!empty($request->pass)){
+
+        $datosUsuario['pass'] =
+        Hash::make($request->pass);
+
+        $cambioPassword = true;
+    }
+
+    DB::table('usuarios')
+    ->where('id', $usuario->id)
+    ->update($datosUsuario);
+
+    if($cambioPassword){
+
+        DB::table('personal_access_tokens')
+        ->where('tokenable_id', $usuario->id)
+        ->delete();
+    }
+
+    return response()->json([
+
+        'ok' => true,
+
+        'cerrarSesion' => $cambioPassword,
+
+        'mensaje' => 'Perfil actualizado correctamente'
+    ]);
+});
+
+
+/* =========================================
+   PERFIL
+========================================= */
+
+Route::middleware('auth:sanctum')
+->get('/perfil', function (Request $request) {
+
+    $usuario = DB::table('usuarios')
+    ->join(
+        'personas',
+        'usuarios.id_persona',
+        '=',
+        'personas.id'
+    )
+    ->where(
+        'usuarios.id',
+        $request->user()->id
+    )
+    ->select(
+
+        'usuarios.id',
+
+        'usuarios.correo',
+
+        'usuarios.admin',
+
+        'personas.nombre',
+
+        'personas.apellido_p',
+
+        'personas.apellido_m',
+
+        'personas.celular'
+    )
+    ->first();
+
+    return response()->json([
+
+        'ok' => true,
+
+        'usuario' => $usuario
     ]);
 });
