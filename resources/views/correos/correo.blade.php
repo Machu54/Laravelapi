@@ -17,7 +17,7 @@
     <h1>{{ $codigo }}</h1>
 
     <p>
-        Ingresa este código en la aplicación para activar tu cuenta.
+        Ingresa este código en la aplicación para verificar.
     </p>
 
 </body>

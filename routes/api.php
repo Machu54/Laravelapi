@@ -5,7 +5,9 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+
 use App\Mail\Correos;
+use App\Mail\RecuperarPassword;
 
 use App\Events\Evento;
 
@@ -14,6 +16,159 @@ use App\Events\Evento;
 | API Routes
 |--------------------------------------------------------------------------
 */
+Route::post('/verificar-codigo', function (Request $request) {
+
+    $usuario = DB::table('usuarios')
+    ->where(
+        'correo',
+        strtolower($request->correo)
+    )
+    ->first();
+
+    if(!$usuario){
+
+        return response()->json([
+
+            'ok' => false,
+
+            'mensaje' => 'Usuario no encontrado.'
+        ]);
+    }
+
+    if(
+        $usuario->codigo_expira
+        &&
+        now()->greaterThan(
+            $usuario->codigo_expira
+        )
+    ){
+
+        DB::table('usuarios')
+        ->where('id', $usuario->id)
+        ->update([
+
+            'codigo_recuperacion' => null,
+
+            'codigo_expira' => null
+        ]);
+
+        return response()->json([
+
+            'ok' => false,
+
+            'mensaje' => 'El código ha expirado.'
+        ]);
+    }
+
+    if(
+        $usuario->codigo_recuperacion
+        !=
+        $request->codigo
+    ){
+
+        return response()->json([
+
+            'ok' => false,
+
+            'mensaje' => 'Código incorrecto.'
+        ]);
+    }
+
+    return response()->json([
+
+        'ok' => true
+    ]);
+});
+
+
+Route::post('/nueva-password', function (Request $request) {
+
+    $usuario = DB::table('usuarios')
+    ->where(
+        'correo',
+        strtolower($request->correo)
+    )
+    ->first();
+
+    if(!$usuario){
+
+        return response()->json([
+
+            'ok' => false,
+
+            'mensaje' => 'Usuario no encontrado.'
+        ], 404);
+    }
+
+    DB::table('usuarios')
+    ->where('id', $usuario->id)
+    ->update([
+
+        'pass' => Hash::make(
+            $request->pass
+        ),
+
+        'codigo_recuperacion' => null,
+
+        'codigo_expira' => null,
+
+        'updated_at' => now()
+    ]);
+
+    return response()->json([
+
+        'ok' => true,
+
+        'mensaje' => 'Contraseña actualizada correctamente.'
+    ]);
+});
+
+
+Route::post('/recuperar', function (Request $request) {
+
+    $usuario = DB::table('usuarios')
+    ->where(
+        'correo',
+        strtolower($request->correo)
+    )
+    ->first();
+
+    if (!$usuario) {
+
+        return response()->json([
+
+            'ok' => false,
+
+            'mensaje' => 'Correo no encontrado'
+        ], 404);
+    }
+
+    $codigo = rand(100000, 999999);
+
+    DB::table('usuarios')
+    ->where('id', $usuario->id)
+    ->update([
+
+        'codigo_recuperacion' => $codigo,
+
+        'codigo_expira' => now()->addMinutes(10),
+
+        'updated_at' => now()
+    ]);
+
+    Mail::to($usuario->correo)
+    ->send(
+         new RecuperarPassword($codigo)
+    );
+
+    return response()->json([
+
+        'ok' => true,
+
+        'mensaje' => 'Código enviado al correo.'
+    ]);
+});
+
 
 /* =========================================
    PRUEBA
