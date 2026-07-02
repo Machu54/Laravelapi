@@ -486,7 +486,8 @@ Route::middleware('auth:sanctum')
    PERSONAS
 ========================================= */
 
-Route::get('/personas', function () {
+Route::middleware('auth:sanctum')
+->get('/personas', function () {
 
     return DB::table('personas')
     ->select(
@@ -502,7 +503,8 @@ Route::get('/personas', function () {
    MENSAJES
 ========================================= */
 
-Route::get('/mensajes', function () {
+Route::middleware('auth:sanctum')
+->get('/mensajes', function () {
 
     return DB::table('mensajes')
     ->orderBy('id')
@@ -513,7 +515,8 @@ Route::get('/mensajes', function () {
    CHAT
 ========================================= */
 
-Route::post('/mensaje', function (Request $request) {
+Route::middleware('auth:sanctum')
+->post('/mensaje', function (Request $request) {
 
     DB::table('mensajes')->insert([
 
@@ -552,7 +555,8 @@ Route::post('/mensaje', function (Request $request) {
 
 /* OBTENER TODAS */
 
-Route::get('/multas', function () {
+Route::middleware('auth:sanctum')
+->get('/multas', function () {
 
     return DB::table('multas')
     ->join(
@@ -572,7 +576,8 @@ Route::get('/multas', function () {
 
 /* MULTAS POR USUARIO */
 
-Route::get('/multas-usuario/{id}', function ($id) {
+Route::middleware('auth:sanctum')
+->get('/multas-usuario/{id}', function ($id) {
 
     return DB::table('multas')
     ->where('id_persona', $id)
@@ -582,7 +587,8 @@ Route::get('/multas-usuario/{id}', function ($id) {
 
 /* CREAR MULTA */
 
-Route::post('/multas', function (Request $request) {
+Route::middleware('auth:sanctum')
+->post('/multas', function (Request $request) {
 
     $id = DB::table('multas')->insertGetId([
 
@@ -620,8 +626,8 @@ Route::post('/multas', function (Request $request) {
 });
 
 /* ACTUALIZAR MULTA */
-
-Route::put('/multas/{id}', function (
+Route::middleware('auth:sanctum')
+->put('/multas/{id}', function (
     Request $request,
     $id
 ) {
@@ -647,7 +653,8 @@ Route::put('/multas/{id}', function (
 
 /* ELIMINAR MULTA */
 
-Route::delete('/multas/{id}', function ($id) {
+Route::middleware('auth:sanctum')
+->delete('/multas/{id}', function ($id) {
 
     DB::table('multas')
     ->where('id', $id)
